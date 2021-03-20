@@ -10,7 +10,7 @@ env:
   HOMEBREW_CHANGE_ARCH_TO_ARM: 1
 jobs:
   tap_syntax:
-    if: github.repository == 'Homebrew/homebrew-core'
+    # if: github.repository == 'Homebrew/homebrew-core'
     runs-on: ubuntu-latest
     outputs:
       run-tests: ${{ steps.check-labels.outputs.result }}
@@ -22,17 +22,31 @@ jobs:
         id: set-up-homebrew
         uses: Homebrew/actions/setup-homebrew@master
 
+      # - name: Set up tap
+      #   run: |
+      #     HOMEBREW_TAPS="$(brew --prefix)/Homebrew/Library/Taps"
+      #     HOMEBREW_TAP_REPOSITORY="$HOMEBREW_TAPS/$(echo "${{ github.repository_owner }}" | tr "[:upper:]" "[:lower:]")/homebrew-core"
+      #     mkdir -p "$(dirname "$HOMEBREW_TAP_REPOSITORY")"
+      #     ln -vs "$HOMEBREW_TAPS/homebrew/homebrew-core" "$HOMEBREW_TAP_REPOSITORY"
+      #     # mv "$HOMEBREW_TAPS/homebrew/homebrew-core" "$HOMEBREW_TAP_REPOSITORY"
+      #     # rm -rf "$GITHUB_WORKSPACE"
+      #     # ln -vs "$HOMEBREW_TAP_REPOSITORY" "$GITHUB_WORKSPACE"
+
       - name: Cache Bundler RubyGems
-        uses: actions/cache@v1
+        # uses: actions/cache@v1
+        id: cache
+        uses: gerbal/always-cache@v1.0.3
         with:
           path: ${{ steps.set-up-homebrew.outputs.gems-path }}
           key: ${{ runner.os }}-rubygems-${{ steps.set-up-homebrew.outputs.gems-hash }}
           restore-keys: ${{ runner.os }}-rubygems-
 
       - name: Install Bundler RubyGems
+        # if: success()
+        if: steps.cache.outputs.cache-hit != 'true'
         run: brew install-bundler-gems
 
-      - run: brew test-bot --only-tap-syntax
+      - run: brew test-bot --tap=homebrew/core --only-tap-syntax
 
       - name: Check .github/workflows/tests-linux.yml formulae coverage
         run: |
@@ -81,11 +95,13 @@ jobs:
             console.log('CI-force-arm label found.')
 
   tests:
-    needs: tap_syntax
-    if: github.event_name == 'pull_request' && needs.tap_syntax.outputs.run-tests
+    # needs: tap_syntax
+    # if: github.event_name == 'pull_request' && needs.tap_syntax.outputs.run-tests
+    if: github.event_name == 'pull_request'
     strategy:
       matrix:
-        version: ["11-arm", "11.0", "10.15", "10.14"]
+        # version: ["11-arm", "11.0", "10.15", "10.14"]
+        version: ["macos-11.0", "macos-10.15", "ubuntu-20.04", "ubuntu-18.04", "ubuntu-16.04"]
       fail-fast: false
     runs-on: ${{ matrix.version }}
     timeout-minutes: 4320
@@ -102,19 +118,33 @@ jobs:
       - name: Force vendored Ruby on Catalina
         if: matrix.version == '10.15'
         run: echo 'HOMEBREW_FORCE_VENDOR_RUBY=1' >> $GITHUB_ENV
+      - name: Install Homebrew
+        if: runner.os == 'Linux'
+        run: |
+          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+          echo "/home/linuxbrew/.linuxbrew/bin" >> $GITHUB_PATH
       - name: Set up Homebrew
         id: set-up-homebrew
         uses: Homebrew/actions/setup-homebrew@master
 
-      - run: brew test-bot --only-cleanup-before
+      # - name: Set up tap
+      #   run: |
+      #     HOMEBREW_TAPS="$(brew --prefix)/Homebrew/Library/Taps"
+      #     HOMEBREW_TAP_REPOSITORY="$HOMEBREW_TAPS/$(echo "${{ github.repository_owner }}" | tr "[:upper:]" "[:lower:]")/homebrew-core"
+      #     mkdir -p "$(dirname "$HOMEBREW_TAP_REPOSITORY")"
+      #     ln -vs "$HOMEBREW_TAPS/homebrew/homebrew-core" "$HOMEBREW_TAP_REPOSITORY"
+
+      - run: brew test-bot --tap=homebrew/core --only-cleanup-before
 
       - run: brew test-bot --only-setup
+        # if: success()
+        if: false
 
       - name: Run brew test-bot --only-formulae
         run: |
           mkdir bottles
           cd bottles
-          brew test-bot --only-formulae
+          brew test-bot --tap=homebrew/core --skip-recursive-dependents --only-formulae
 
       - name: Output brew test-bot --only-formulae failures
         if: always()
@@ -168,8 +198,10 @@ jobs:
           path: bottles
 
       - run: brew test-bot --only-cleanup-after
-        if: always()
+        # if: always()
+        if: false
 
       - name: Post Cleanup
-        if: always()
+        # if: always()
+        if: false
         run: rm -rvf bottles
