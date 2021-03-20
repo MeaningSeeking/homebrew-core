@@ -144,7 +144,7 @@ jobs:
         run: |
           mkdir bottles
           cd bottles
-          brew test-bot --tap=homebrew/core --skip-recursive-dependents --only-formulae
+          brew test-bot --tap=homebrew/core --skip-recursive-dependents --only-formulae cargo-edit
 
       - name: Output brew test-bot --only-formulae failures
         if: always()
