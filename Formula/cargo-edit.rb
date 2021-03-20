@@ -4,7 +4,7 @@ class CargoEdit < Formula
   url "https://github.com/killercup/cargo-edit/archive/v0.7.0.tar.gz"
   sha256 "56b51ef8d52d8b414b5c4001053fa196dc7710fea9b1140171a314bc527a2ea2"
   license "MIT"
-  revision 1
+  revision 2
 
   bottle do
     sha256 cellar: :any, arm64_big_sur: "b06a55109f2992cd06372aebf167c351b106d9e0d7a1fe9b6bc18c1d21abff01"
@@ -16,6 +16,13 @@ class CargoEdit < Formula
   depends_on "rust" => :build
   depends_on "libgit2"
   depends_on "openssl@1.1"
+
+  # Read config files with extension that was added in version 1.39.
+  # https://github.com/killercup/cargo-edit/pull/439
+  patch do
+    url "https://github.com/killercup/cargo-edit/commit/828f65b709b8415b3ec0e3fd558ea57db3553209.patch?full_index=1"
+    sha256 "a24b484518eed67cdab312a48d3a61e626ea3296fe4d365b33f6068bdfab542e"
+  end
 
   def install
     system "cargo", "install", *std_cargo_args
